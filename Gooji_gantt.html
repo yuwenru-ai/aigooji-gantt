@@ -1056,17 +1056,46 @@ function applyMode() {
   }
 }
 async function adminLogin() {
-  const pw = prompt('請輸入管理者密碼：');
-  if (pw === null) return;
-  const hash = await sha256(pw);
-  if (hash === ADMIN_HASH) {
-    const remember = confirm('登入成功！\n\n要在這台裝置「永久記住」管理者身分嗎？\n（按「確定」記住；按「取消」則只在這次瀏覽器分頁有效）');
-    if (remember) localStorage.setItem(ADMIN_KEY, '1');
-    else sessionStorage.setItem(ADMIN_KEY, '1');
-    isAdmin = true;
-    applyMode();
-    showSavedIndicator('管理者模式 ✓');
-  } else alert('密碼錯誤');
+  showAdminLoginModal();
+}
+
+function showAdminLoginModal() {
+  const bg = document.createElement('div');
+  bg.id = 'admin-login-modal-bg';
+  bg.style.cssText = 'position:fixed;inset:0;background:rgba(20,30,50,0.45);display:flex;align-items:center;justify-content:center;z-index:200;';
+  bg.innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:24px 28px;width:320px;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+      <h2 style="font-size:16px;margin:0 0 14px;color:#1f2a44;">&#x1F512; 管理者登入</h2>
+      <label style="display:block;font-size:12px;color:#5a6987;margin-bottom:4px;">請輸入管理者密碼：</label>
+      <input id="admin-pw-input" type="password" placeholder="密碼" style="width:100%;padding:7px 10px;border:1px solid #cbd2dc;border-radius:4px;font-size:14px;box-sizing:border-box;font-family:inherit;" />
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button onclick="document.getElementById('admin-login-modal-bg').remove()" style="padding:7px 16px;border-radius:4px;border:1px solid #cbd2dc;background:#fff;cursor:pointer;font-size:13px;">取消</button>
+        <button id="admin-pw-confirm" style="padding:7px 16px;border-radius:4px;border:none;background:#1a73e8;color:#fff;cursor:pointer;font-size:13px;">確認</button>
+      </div>
+    </div>`;
+  document.body.appendChild(bg);
+  const input = document.getElementById('admin-pw-input');
+  input.focus();
+  async function doLogin() {
+    const pw = input.value;
+    if (!pw) return;
+    const hash = await sha256(pw);
+    if (hash === ADMIN_HASH) {
+      bg.remove();
+      const remember = confirm('登入成功！\n\n要在這台裝置「永久記住」管理者身分嗎？\n（按「確定」記住；按「取消」則只在這次瀏覽器分頁有效）');
+      if (remember) localStorage.setItem(ADMIN_KEY, '1');
+      else sessionStorage.setItem(ADMIN_KEY, '1');
+      isAdmin = true;
+      applyMode();
+      showSavedIndicator('管理者模式 ✓');
+    } else {
+      alert('密碼錯誤');
+      input.value = '';
+      input.focus();
+    }
+  }
+  document.getElementById('admin-pw-confirm').addEventListener('click', doLogin);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); if (e.key === 'Escape') bg.remove(); });
 }
 function adminLogout() {
   if (!confirm('確定要登出管理者模式嗎？')) return;
